@@ -1,141 +1,106 @@
-'use strict';
+import './style.css';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+var renderer, scene, camera, composer, circle, skelet, particle;
 
-let scene,
-    camera,
-    renderer,
-    controls;
-
-let particles,
-    saturn;
-
-let width = window.innerWidth,
-    height = window.innerHeight;
-
-const colors = [0x37BE95, 0xF3F3F3, 0x6549C0];
-
-init();
-animate();
-
-function init() {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-  camera.lookAt(scene.position);
-  camera.position.z = 500;
-
-  renderer = new THREE.WebGLRenderer();
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(width, height);
-  renderer.setClearColor(0x0E2255);
-  renderer.shadowMap.enabled = true;
- 
-  // controls = new THREE.OrbitControls(camera, renderer.domElement);
-  
-  const ambientLight = new THREE.AmbientLight();
-  scene.add(ambientLight);
-
-  const light = new THREE.DirectionalLight();
-  light.position.set(200, 100, 200);
-  light.castShadow = true;
-  light.shadow.camera.left = -100;
-  light.shadow.camera.right = 100;
-  light.shadow.camera.top = 100;
-  light.shadow.camera.bottom = -100;
-  scene.add(light);
-  
-  drawParticles();
-  drawSaturn();
-
-  document.getElementById('world').appendChild(renderer.domElement);
-
-  window.addEventListener('resize', onResize);
+window.onload = function() {
+  init();
+  animate();
 }
 
-function onResize() {
-  width = window.innerWidth;
-  height = window.innerHeight;
-  camera.aspect = width / height;
+function init() {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio((window.devicePixelRatio) ? window.devicePixelRatio : 1);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.autoClear = false;
+  renderer.setClearColor(0x000000, 0.0);
+  document.getElementById('canvas').appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+  camera.position.z = 400;
+  scene.add(camera);
+
+  circle = new THREE.Object3D();
+  skelet = new THREE.Object3D();
+  particle = new THREE.Object3D();
+
+  scene.add(circle);
+  scene.add(skelet);
+  scene.add(particle);
+
+  var geometry = new THREE.TetrahedronGeometry(2, 0);
+  var geom = new THREE.IcosahedronGeometry(7, 1);
+  var geom2 = new THREE.IcosahedronGeometry(15, 1);
+
+  var material = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    shading: THREE.FlatShading
+  });
+
+  for (var i = 0; i < 1000; i++) {
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    mesh.position.multiplyScalar(90 + (Math.random() * 700));
+    mesh.rotation.set(Math.random() * 2, Math.random() * 2, Math.random() * 2);
+    particle.add(mesh);
+  }
+
+  var mat = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    shading: THREE.FlatShading
+  });
+
+  var mat2 = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    wireframe: true,
+    side: THREE.DoubleSide
+
+  });
+
+  var planet = new THREE.Mesh(geom, mat);
+  planet.scale.x = planet.scale.y = planet.scale.z = 16;
+  circle.add(planet);
+
+  var planet2 = new THREE.Mesh(geom2, mat2);
+  planet2.scale.x = planet2.scale.y = planet2.scale.z = 10;
+  skelet.add(planet2);
+
+  var ambientLight = new THREE.AmbientLight(0x999999 );
+  scene.add(ambientLight);
+  
+  var lights = [];
+lights[0] = new THREE.DirectionalLight( 0xffffff, 1 );
+lights[0].position.set( 1, 0, 0 );
+lights[1] = new THREE.DirectionalLight( 0x11E8BB, 1 );
+lights[1].position.set( 0.75, 1, 0.5 );
+lights[2] = new THREE.DirectionalLight( 0x8200C9, 1 );
+lights[2].position.set( -0.75, -1, 0.5 );
+scene.add( lights[0] );
+scene.add( lights[1] );
+scene.add( lights[2] );
+  
+
+  window.addEventListener('resize', onWindowResize, false);
+
+};
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(width, height);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 function animate() {
   requestAnimationFrame(animate);
 
-  render();
-}
+  particle.rotation.x += 0.0000;
+  particle.rotation.y -= 0.0040;
+  circle.rotation.x -= 0.0020;
+  circle.rotation.y -= 0.0030;
+  skelet.rotation.x -= 0.0010;
+  skelet.rotation.y += 0.0020;
+  renderer.clear();
 
-function render() {
-  particles.rotation.x += 0.001;
-  particles.rotation.y -= 0.004;
-  saturn.rotation.y += 0.003;
-  renderer.render(scene, camera);
-}
-
-function drawParticles() {
-  particles = new THREE.Group();
-  scene.add(particles);
-  const geometry = new THREE.TetrahedronGeometry(5, 0);
-  
-  for (let i = 0; i < 500; i ++) {
-    const material = new THREE.MeshPhongMaterial({
-      color: colors[Math.floor(Math.random() * colors.length)],
-      size: Math.random(100),
-      shading: THREE.FlatShading
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set((Math.random() - 0.5) * 1000,
-                      (Math.random() - 0.5) * 1000,
-                      (Math.random() - 0.5) * 1000);
-    mesh.updateMatrix();
-    mesh.matrixAutoUpdate = false;
-    particles.add(mesh);
-  }
-}
-
-function drawSaturn() {
-  saturn = new THREE.Group();
-  saturn.rotation.set(0.4, 0.3, 0);
-  scene.add(saturn);
-  
-  const planetGeometry = new THREE.IcosahedronGeometry(100, 1);
-  
-  const planetMaterial = new THREE.MeshPhongMaterial({
-    color: 0x37BE95,
-    shading: THREE.FlatShading
-    });
-  const planet = new THREE.Mesh(planetGeometry, planetMaterial);
-  
-  planet.castShadow = true;
-  planet.receiveShadow = true;
-  planet.position.set(0, 40, 0);
-  saturn.add(planet);
-  
-  const ringGeometry = new THREE.TorusGeometry(140, 12, 6, 105);
-  const ringMeterial = new THREE.MeshStandardMaterial({
-    color: 0x6549C0,
-    shading: THREE.FlatShading
-  });
-  const ring = new THREE.Mesh(ringGeometry, ringMeterial);
-  ring.position.set(0, 40, 0)
-  ring.rotateX(90);
-  saturn.rotation.set(1.1, 1.3, .3);
-  ring.castShadow = true;
-  ring.receiveShadow = true;
-  
-  const ringGeometry2 = new THREE.TorusGeometry(140, 1, 6, 105);
-  const ringMeterial2 = new THREE.MeshStandardMaterial({
-    color: 0x6549C0,
-    shading: THREE.FlatShading
-  });
-  
-  const ring2 = new THREE.Mesh(ringGeometry2, ringMeterial2);
-  ring2.position.set(0, 40, 0)
-  ring2.rotateX(120);
-  
-  saturn.add(ring);
-  saturn.add(ring2);
-  
-}
-
+  renderer.render( scene, camera )
+};
